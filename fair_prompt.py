@@ -141,45 +141,45 @@ def main(args):
         tensor_parallel_size=args.tensor_parallel_size,
         gpu_memory_utilization=0.85, max_model_len=2048 # avoid OOM
     )
+    for dataset in args.dataset:
+        all_train_sentences, all_train_labels, all_test_sentences, all_test_labels, dataset_config = load_dataset(
+            dataset = dataset,
+        )
 
-    all_train_sentences, all_train_labels, all_test_sentences, all_test_labels, dataset_config = load_dataset(
-        dataset = args.dataset,
-    )
+        if args.do_debug:
+            all_test_sentences = all_test_sentences[:100]
+            all_test_labels = all_test_labels[:100]
+            print("Debug mode, only use first 100 samples of the dataset")
 
-    if args.do_debug:
-        all_test_sentences = all_test_sentences[:100]
-        all_test_labels = all_test_labels[:100]
-        print("Debug mode, only use first 100 samples of the dataset")
+        dataset = {
+            "config": dataset_config,
+            "train_sentences": all_train_sentences,
+            "train_labels": all_train_labels,
+            "test_sentences": all_test_sentences,
+            "test_labels": all_test_labels
+        }
 
-    dataset = {
-        "config": dataset_config,
-        "train_sentences": all_train_sentences,
-        "train_labels": all_train_labels,
-        "test_sentences": all_test_sentences,
-        "test_labels": all_test_labels
-    }
+        prompts = perpare_prompts(dataset, model, args)
 
-    prompts = perpare_prompts(dataset, model, args)
+        print(f"PROMPT EXAMPLE: \n{prompts[0]}\n")
 
-    print(f"PROMPT EXAMPLE: \n{prompts[0]}\n")
+        sampling_params = SamplingParams(**GREEDY_PARAMS)
+        sampling_params.logprobs=5000
+        responses = model.generate(prompts=prompts, sampling_params=sampling_params)
 
-    sampling_params = SamplingParams(**GREEDY_PARAMS)
-    sampling_params.logprobs=5000
-    responses = model.generate(prompts=prompts, sampling_params=sampling_params)
-
-    target_token_ids = get_target_token_ids(dataset_config, model)
-    accuracy = evaluate(responses, dataset["test_labels"], target_token_ids)
-
-    return accuracy
+        target_token_ids = get_target_token_ids(dataset_config, model)
+        accuracy = evaluate(responses, dataset["test_labels"], target_token_ids)
+        print(f"Dataset: {dataset}, Accuracy: {accuracy:.4f}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-m","--model_name_or_path", type=str, default="gpt2-medium")
     parser.add_argument("--tensor_parallel_size", type=int, default=1)
     parser.add_argument("--num_shots", type=int, default=4)
-    parser.add_argument("--dataset", type=str, choices=["sst2", "agnews", "trec", "rte", "cola"])
+    parser.add_argument("--dataset", nargs="+", type=str, required=True,
+                        choices=["sst2", "agnews", "trec", "rte", "cola"])
     parser.add_argument("--do_debug", action="store_true", help="If set, only use first 100 samples of the dataset")
     args = parser.parse_args()
-    results = main(args)
-    print(f"Dataset: {args.dataset}, Accuracy: {results:.4f}")
+    main(args)
+    # print(f"Dataset: {args.dataset}, Accuracy: {results:.4f}")
 
