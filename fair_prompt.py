@@ -161,6 +161,8 @@ def main(args):
 
     prompts = perpare_prompts(dataset, model, args)
 
+    print(f"PROMPT EXAMPLE: \n{prompts[0]}\n")
+
     sampling_params = SamplingParams(**GREEDY_PARAMS)
     sampling_params.logprobs=5000
     responses = model.generate(prompts=prompts, sampling_params=sampling_params)
