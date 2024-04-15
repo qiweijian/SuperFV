@@ -56,10 +56,10 @@ def find_fair_demonstration(all_train_sentences, all_train_labels, num_shots, da
         return max_idx, max_value
     
     train_sentences, train_labels= [], []
-    for i in range(int(num_shots/4)):
-        idxs = np.random.choice(len(all_train_labels), size=4, replace=False)
-        train_sentences += [deepcopy(all_train_sentences[i]) for i in idxs]
-        train_labels += [deepcopy(all_train_labels[i]) for i in idxs]
+    # for i in range(int(num_shots/4)):
+    idxs = np.random.choice(len(all_train_labels), size=num_shots, replace=False)
+    train_sentences += [deepcopy(all_train_sentences[i]) for i in idxs]
+    train_labels += [deepcopy(all_train_labels[i]) for i in idxs]
 
     content_free_inputs = ["N/A", "", "[MASK]"]
     all_loop = len(train_labels)
@@ -141,9 +141,9 @@ def main(args):
         tensor_parallel_size=args.tensor_parallel_size,
         gpu_memory_utilization=0.85, max_model_len=2048 # avoid OOM
     )
-    for dataset in args.dataset:
+    for dataset_name in args.dataset:
         all_train_sentences, all_train_labels, all_test_sentences, all_test_labels, dataset_config = load_dataset(
-            dataset = dataset,
+            dataset=dataset_name,
         )
 
         if args.do_debug:
@@ -169,7 +169,7 @@ def main(args):
 
         target_token_ids = get_target_token_ids(dataset_config, model)
         accuracy = evaluate(responses, dataset["test_labels"], target_token_ids)
-        print(f"Dataset: {dataset}, Accuracy: {accuracy:.4f}")
+        print(f"Dataset: {dataset_name}, Accuracy: {accuracy:.4f}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
